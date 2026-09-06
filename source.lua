@@ -1,3 +1,7 @@
+--[[ Credits
+    Matas#3535 @matas - Created UI
+    bored#9316 @wally hub user - Helped make library
+]]
 -- // Variables
 local ws = game:GetService("Workspace")
 local uis = game:GetService("UserInputService")
@@ -120,8 +124,8 @@ do
         elseif instanceType == "Triangle" or instanceType == "triangle" then
             local frame = Drawing.new("Triangle")
             frame.Visible = true
-            frame.Filled = false
-            frame.Thickness = 2
+            frame.Filled = true
+            frame.Thickness = 0
             frame.Color = Color3.fromRGB(255,255,255)
             frame.ZIndex = 50
             frame.Transparency = library.shared.initialized and 1 or 0
@@ -892,7 +896,7 @@ do
             --
             local cursor_inline = utility:Create("Triangle", nil, {
                 Color = theme.accent,
-                Filled = false,
+                Filled = true,
                 Thickness = 0,
                 ZIndex = 65,
                 Hidden = true
