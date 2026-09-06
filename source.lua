@@ -910,7 +910,7 @@ do
                 cursor_inline.PointC = Vector2.new(mouseLocation.X + 6, mouseLocation.Y + 16)
             end)
             --
-            uis.MouseIconEnabled = false
+            uis.MouseIconEnabled = true
             --
             return window.cursor
         end
@@ -925,9 +925,9 @@ do
                 end
             end)
             --
-            window.cursor["cursor"].Transparency = window.isVisible and 1 or 0
-            window.cursor["cursor_inline"].Transparency = window.isVisible and 1 or 0
-            uis.MouseIconEnabled = not window.isVisible
+			window.cursor["cursor"].Transparency = 0
+			window.cursor["cursor_inline"].Transparency = 0
+			uis.MouseIconEnabled = true
             --
             window.fading = false
         end
