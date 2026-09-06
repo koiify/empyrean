@@ -48,6 +48,12 @@ local library = {
     ended = {},
     changed = {},
 
+    -- Live appearance bindings. These let theme changes recolor existing
+    -- Drawing objects immediately instead of only affecting newly-created UI.
+    themeBindings = {},
+    textSizeBindings = {},
+    fontBindings = {},
+
     folders = {
         main = "empyrean",
         assets = "empyrean/assets",
@@ -58,6 +64,7 @@ local library = {
         initialized = false,
         fps = 0,
         ping = 0,
+        opacity = 1,
     },
 }
 
@@ -105,6 +112,313 @@ local theme = {
     font = 2,
     textsize = 13,
 }
+
+local THEME_COLOR_KEYS = {
+    "accent",
+    "light_contrast",
+    "dark_contrast",
+    "outline",
+    "inline",
+    "textcolor",
+    "textborder",
+    "cursoroutline",
+}
+
+for _, key in ipairs(THEME_COLOR_KEYS) do
+    library.themeBindings[key] = {}
+end
+
+local function removeBindingFromList(list, object, property)
+    for index = #list, 1, -1 do
+        local binding = list[index]
+
+        if
+            binding.object == object
+            and (
+                property == nil
+                or binding.property == property
+            )
+        then
+            table.remove(list, index)
+        end
+    end
+end
+
+local function removeAppearanceBindings(object)
+    for _, key in ipairs(THEME_COLOR_KEYS) do
+        removeBindingFromList(
+            library.themeBindings[key],
+            object
+        )
+    end
+
+    removeBindingFromList(
+        library.textSizeBindings,
+        object
+    )
+
+    removeBindingFromList(
+        library.fontBindings,
+        object
+    )
+end
+
+local function bindThemeProperty(
+    object,
+    property,
+    key
+)
+    if
+        not object
+        or not property
+        or not key
+        or not library.themeBindings[key]
+    then
+        return
+    end
+
+    -- A Drawing property belongs to exactly one theme slot at a time.
+    for _, otherKey in ipairs(THEME_COLOR_KEYS) do
+        removeBindingFromList(
+            library.themeBindings[otherKey],
+            object,
+            property
+        )
+    end
+
+    table.insert(
+        library.themeBindings[key],
+        {
+            object = object,
+            property = property,
+        }
+    )
+end
+
+local function resolveSquareThemeKey(color)
+    if typeof(color) ~= "Color3" then
+        return nil
+    end
+
+    -- These are the theme slots used as Square/Triangle/etc. fill colors.
+    -- Text-only keys are intentionally excluded so duplicate colors such as
+    -- outline/textborder remain independently customizable.
+    for _, key in ipairs({
+        "accent",
+        "light_contrast",
+        "dark_contrast",
+        "outline",
+        "inline",
+        "cursoroutline",
+    }) do
+        if theme[key] == color then
+            return key
+        end
+    end
+
+    return nil
+end
+
+function utility:SetThemeProperty(
+    object,
+    property,
+    key
+)
+    if
+        not object
+        or not library.themeBindings[key]
+    then
+        return
+    end
+
+    pcall(function()
+        object[property] = theme[key]
+    end)
+
+    bindThemeProperty(
+        object,
+        property,
+        key
+    )
+end
+
+function library:SetThemeColor(key, color)
+    key = tostring(key or "")
+
+    if
+        not library.themeBindings[key]
+        or typeof(color) ~= "Color3"
+    then
+        return false
+    end
+
+    theme[key] = color
+
+    local bindings =
+        library.themeBindings[key]
+
+    for index = #bindings, 1, -1 do
+        local binding =
+            bindings[index]
+
+        local ok =
+            pcall(function()
+                binding.object[binding.property] =
+                    color
+            end)
+
+        if not ok then
+            table.remove(
+                bindings,
+                index
+            )
+        end
+    end
+
+    return true
+end
+
+function library:SetTheme(values)
+    if type(values) ~= "table" then
+        return false
+    end
+
+    for key, color in pairs(values) do
+        if
+            library.themeBindings[key]
+            and typeof(color) == "Color3"
+        then
+            self:SetThemeColor(
+                key,
+                color
+            )
+        end
+    end
+
+    return true
+end
+
+function library:GetTheme()
+    local result = {}
+
+    for _, key in ipairs(THEME_COLOR_KEYS) do
+        result[key] =
+            theme[key]
+    end
+
+    result.font =
+        theme.font
+
+    result.textsize =
+        theme.textsize
+
+    result.opacity =
+        library.shared.opacity
+
+    return result
+end
+
+function library:SetTextSize(value)
+    value =
+        math.clamp(
+            math.floor(
+                tonumber(value)
+                or theme.textsize
+            ),
+            8,
+            24
+        )
+
+    theme.textsize =
+        value
+
+    for index = #library.textSizeBindings, 1, -1 do
+        local binding =
+            library.textSizeBindings[index]
+
+        local ok =
+            pcall(function()
+                binding.object.Size =
+                    value
+            end)
+
+        if not ok then
+            table.remove(
+                library.textSizeBindings,
+                index
+            )
+        end
+    end
+
+    return value
+end
+
+function library:SetFont(value)
+    value =
+        math.clamp(
+            math.floor(
+                tonumber(value)
+                or theme.font
+            ),
+            0,
+            3
+        )
+
+    theme.font =
+        value
+
+    for index = #library.fontBindings, 1, -1 do
+        local binding =
+            library.fontBindings[index]
+
+        local ok =
+            pcall(function()
+                binding.object.Font =
+                    value
+            end)
+
+        if not ok then
+            table.remove(
+                library.fontBindings,
+                index
+            )
+        end
+    end
+
+    return value
+end
+
+function library:SetOpacity(value)
+    value =
+        math.clamp(
+            tonumber(value)
+            or library.shared.opacity
+            or 1,
+            0.1,
+            1
+        )
+
+    library.shared.opacity =
+        value
+
+    local window =
+        library.currentWindow
+
+    if
+        window
+        and window.isVisible
+    then
+        for _, entry in ipairs(library.drawings) do
+            pcall(function()
+                entry[1].Transparency =
+                    (entry[3] or 1)
+                    * value
+            end)
+        end
+    end
+
+    return value
+end
 
 --==============================================================
 -- INTERNAL HELPERS
@@ -397,6 +711,17 @@ function utility:Create(instanceType, instanceOffset, instanceProperties, instan
         end
     end
 
+    if
+        library.shared.initialized
+        and not hidden
+    then
+        pcall(function()
+            object.Transparency =
+                (requestedTransparency == nil and 1 or requestedTransparency)
+                * (library.shared.opacity or 1)
+        end)
+    end
+
     local entry = {
         object,
         instanceOffset,
@@ -430,6 +755,18 @@ function utility:UpdateTransparency(instance, instanceTransparency)
     for _, entry in ipairs(library.drawings) do
         if entry[1] == instance then
             entry[3] = instanceTransparency
+
+            if
+                library.currentWindow
+                and library.currentWindow.isVisible
+            then
+                pcall(function()
+                    instance.Transparency =
+                        (instanceTransparency or 1)
+                        * (library.shared.opacity or 1)
+                end)
+            end
+
             return
         end
     end
@@ -441,6 +778,7 @@ function utility:Remove(instance, hidden)
     end
 
     removeFromArray(hidden and library.hidden or library.drawings, instance)
+    removeAppearanceBindings(instance)
     safeRemoveDrawing(instance)
 end
 
@@ -586,37 +924,144 @@ end
 local function createText(parentList, text, position, properties)
     properties = properties or {}
 
-    return utility:Create("TextLabel", nil, {
-        Text = text,
-        Size = properties.Size or theme.textsize,
-        Font = properties.Font or theme.font,
-        Color = properties.Color or theme.textcolor,
-        OutlineColor = properties.OutlineColor or theme.textborder,
-        Outline = properties.Outline == nil and true or properties.Outline,
-        Center = properties.Center or false,
-        Position = position,
-        ZIndex = properties.ZIndex or 55,
-        Transparency = properties.Transparency == nil and 1 or properties.Transparency,
-        Visible = properties.Visible == nil and true or properties.Visible,
-    }, parentList)
+    local color =
+        properties.Color
+        or theme.textcolor
+
+    local outlineColor =
+        properties.OutlineColor
+        or theme.textborder
+
+    local object =
+        utility:Create("TextLabel", nil, {
+            Text = text,
+            Size = properties.Size or theme.textsize,
+            Font = properties.Font or theme.font,
+            Color = color,
+            OutlineColor = outlineColor,
+            Outline = properties.Outline == nil and true or properties.Outline,
+            Center = properties.Center or false,
+            Position = position,
+            ZIndex = properties.ZIndex or 55,
+            Transparency = properties.Transparency == nil and 1 or properties.Transparency,
+            Visible = properties.Visible == nil and true or properties.Visible,
+        }, parentList)
+
+    if object then
+        local colorKey =
+            properties.ThemeColorKey
+
+        if colorKey == nil then
+            if properties.Color == nil then
+                colorKey = "textcolor"
+            elseif color == theme.accent then
+                colorKey = "accent"
+            elseif color == theme.textcolor then
+                colorKey = "textcolor"
+            end
+        elseif colorKey == false then
+            colorKey = nil
+        end
+
+        local outlineKey =
+            properties.ThemeOutlineKey
+
+        if outlineKey == nil then
+            if properties.OutlineColor == nil then
+                outlineKey = "textborder"
+            elseif outlineColor == theme.textborder then
+                outlineKey = "textborder"
+            end
+        elseif outlineKey == false then
+            outlineKey = nil
+        end
+
+        if colorKey then
+            bindThemeProperty(
+                object,
+                "Color",
+                colorKey
+            )
+        end
+
+        if outlineKey then
+            bindThemeProperty(
+                object,
+                "OutlineColor",
+                outlineKey
+            )
+        end
+
+        if properties.Size == nil then
+            table.insert(
+                library.textSizeBindings,
+                {
+                    object = object,
+                    property = "Size",
+                }
+            )
+        end
+
+        if properties.Font == nil then
+            table.insert(
+                library.fontBindings,
+                {
+                    object = object,
+                    property = "Font",
+                }
+            )
+        end
+    end
+
+    return object
 end
 
 local function createSquare(parentList, position, size, color, properties)
     properties = properties or {}
 
-    return utility:Create("Frame", nil, {
-        Position = position,
-        Size = size,
-        Color = color,
-        Filled = properties.Filled == nil and true or properties.Filled,
-        Thickness = properties.Thickness or 0,
-        ZIndex = properties.ZIndex or 50,
-        Transparency = properties.Transparency == nil and 1 or properties.Transparency,
-        Visible = properties.Visible == nil and true or properties.Visible,
-    }, parentList)
+    local object =
+        utility:Create("Frame", nil, {
+            Position = position,
+            Size = size,
+            Color = color,
+            Filled = properties.Filled == nil and true or properties.Filled,
+            Thickness = properties.Thickness or 0,
+            ZIndex = properties.ZIndex or 50,
+            Transparency = properties.Transparency == nil and 1 or properties.Transparency,
+            Visible = properties.Visible == nil and true or properties.Visible,
+        }, parentList)
+
+    if object then
+        local themeKey =
+            properties.ThemeKey
+
+        if themeKey == nil then
+            themeKey =
+                resolveSquareThemeKey(color)
+        elseif themeKey == false then
+            themeKey = nil
+        end
+
+        if themeKey then
+            bindThemeProperty(
+                object,
+                "Color",
+                themeKey
+            )
+        end
+    end
+
+    return object
 end
 
-local function createOutlineBox(parentList, position, size, insideColor, visible)
+local function createOutlineBox(
+    parentList,
+    position,
+    size,
+    insideColor,
+    visible,
+    insideThemeKey
+)
     local outline = createSquare(
         parentList,
         position,
@@ -633,12 +1078,22 @@ local function createOutlineBox(parentList, position, size, insideColor, visible
         {Visible = visible, ZIndex = 57}
     )
 
+    local frameProperties = {
+        Visible = visible,
+        ZIndex = 58,
+    }
+
+    if insideThemeKey ~= nil then
+        frameProperties.ThemeKey =
+            insideThemeKey
+    end
+
     local frame = createSquare(
         parentList,
         position + Vector2.new(2, 2),
         size - Vector2.new(4, 4),
         insideColor or theme.light_contrast,
-        {Visible = visible, ZIndex = 58}
+        frameProperties
     )
 
     return outline, inline, frame
@@ -714,6 +1169,7 @@ local function createSVOverlay(parentList, position, size, hue, visible)
         {
             Visible = visible,
             ZIndex = 80,
+            ThemeKey = false,
         }
     )
 
@@ -736,6 +1192,7 @@ local function createSVOverlay(parentList, position, size, hue, visible)
                 Visible = visible,
                 ZIndex = 81,
                 Transparency = 1 - midpoint,
+                ThemeKey = false,
             }
         )
 
@@ -757,6 +1214,7 @@ local function createSVOverlay(parentList, position, size, hue, visible)
                 Visible = visible,
                 ZIndex = 82,
                 Transparency = midpoint,
+                ThemeKey = false,
             }
         )
 
@@ -882,6 +1340,7 @@ function library:New(info)
     window._size = size
 
     setmetatable(window, library)
+    library.currentWindow = window
 
     --==========================================================
     -- WINDOW CONTENT HELPERS
@@ -985,7 +1444,12 @@ function library:New(info)
         for _, entry in ipairs(library.drawings) do
             setDrawingTransparency(
                 entry[1],
-                self.isVisible and (entry[3] or 1) or 0
+                self.isVisible
+                and (
+                    (entry[3] or 1)
+                    * (library.shared.opacity or 1)
+                )
+                or 0
             )
         end
 
@@ -1054,7 +1518,11 @@ function library:New(info)
         self.isVisible = true
 
         for _, entry in ipairs(library.drawings) do
-            setDrawingTransparency(entry[1], entry[3] or 1)
+            setDrawingTransparency(
+                entry[1],
+                (entry[3] or 1)
+                * (library.shared.opacity or 1)
+            )
         end
 
         self:Cursor()
@@ -1345,7 +1813,11 @@ function pages:Show()
     if window.currentPage and window.currentPage ~= self then
         local oldPage = window.currentPage
         oldPage.open = false
-        oldPage.page_button_color.Color = theme.dark_contrast
+        utility:SetThemeProperty(
+            oldPage.page_button_color,
+            "Color",
+            "dark_contrast"
+        )
 
         for _, section in ipairs(oldPage.sections) do
             for _, drawing in ipairs(section.visibleContent) do
@@ -1358,7 +1830,11 @@ function pages:Show()
 
     window.currentPage = self
     self.open = true
-    self.page_button_color.Color = theme.light_contrast
+    utility:SetThemeProperty(
+        self.page_button_color,
+        "Color",
+        "light_contrast"
+    )
 
     for _, section in ipairs(self.sections) do
         for _, drawing in ipairs(section.visibleContent) do
@@ -1653,7 +2129,11 @@ function sections:Toggle(info)
 
     function toggle:Set(value)
         self.current = value == true
-        self.frame.Color = self.current and theme.accent or theme.light_contrast
+        utility:SetThemeProperty(
+            self.frame,
+            "Color",
+            self.current and "accent" or "light_contrast"
+        )
         callback(self.current)
     end
 
@@ -2307,7 +2787,11 @@ function sections:Multibox(info)
 
         for _, button in ipairs(self.holder.buttons) do
             local selected = table.find(self.current, button.value) ~= nil
-            button.text.Color = selected and theme.accent or theme.textcolor
+            utility:SetThemeProperty(
+                button.text,
+                "Color",
+                selected and "accent" or "textcolor"
+            )
             button.text.Position = button.row.Position + Vector2.new(selected and 8 or 6, 2)
         end
     end
@@ -2327,7 +2811,11 @@ function sections:Multibox(info)
 
         for _, button in ipairs(self.holder.buttons) do
             local selected = table.find(self.current, button.value) ~= nil
-            button.text.Color = selected and theme.accent or theme.textcolor
+            utility:SetThemeProperty(
+                button.text,
+                "Color",
+                selected and "accent" or "textcolor"
+            )
             button.text.Position = button.row.Position + Vector2.new(selected and 8 or 6, 2)
         end
 
@@ -2467,7 +2955,11 @@ function sections:Keybind(info)
 
             if candidate and keybind:Change(candidate) then
                 keybind.selecting = false
-                keybind.frame.Color = theme.light_contrast
+                utility:SetThemeProperty(
+                    keybind.frame,
+                    "Color",
+                    "light_contrast"
+                )
                 keybind.active = keybind.mode == "Always"
                 callback(candidate, keybind.active)
             end
@@ -2502,7 +2994,11 @@ function sections:Keybind(info)
             and pointInside(outline.Position, outline.Size, utility:MouseLocation())
         then
             keybind.selecting = true
-            keybind.frame.Color = theme.dark_contrast
+            utility:SetThemeProperty(
+                keybind.frame,
+                "Color",
+                "dark_contrast"
+            )
             keybind.valueText.Text = "..."
         end
     end)
@@ -2576,7 +3072,8 @@ local function buildColorpicker(section, info, axis, compactRightOffset)
         Vector2.new(swatchX, section.section_frame.Position.Y + axis),
         Vector2.new(30, 15),
         default,
-        page.open
+        page.open,
+        false
     )
 
     if transparency ~= nil then
@@ -2856,6 +3353,7 @@ local function buildColorpicker(section, info, axis, compactRightOffset)
                 Filled = false,
                 Thickness = 1,
                 ZIndex = 84,
+                ThemeKey = false,
             }
         )
 
@@ -2870,6 +3368,7 @@ local function buildColorpicker(section, info, axis, compactRightOffset)
                 Filled = false,
                 Thickness = 1,
                 ZIndex = 85,
+                ThemeKey = false,
             }
         )
 
@@ -2902,6 +3401,7 @@ local function buildColorpicker(section, info, axis, compactRightOffset)
             {
                 Transparency = 0,
                 ZIndex = 60,
+                ThemeKey = false,
             }
         )
 
@@ -2917,6 +3417,7 @@ local function buildColorpicker(section, info, axis, compactRightOffset)
                 Filled = false,
                 Thickness = 1,
                 ZIndex = 84,
+                ThemeKey = false,
             }
         )
 
@@ -3148,7 +3649,11 @@ function sections:ConfigBox(info)
 
     function configBox:Refresh()
         for index, button in ipairs(self.buttons) do
-            button.Color = index == self.current and theme.accent or theme.textcolor
+            utility:SetThemeProperty(
+                button,
+                "Color",
+                index == self.current and "accent" or "textcolor"
+            )
         end
     end
 
@@ -3289,7 +3794,11 @@ function sections:Toggle(info)
 
                 if candidate and keybind:Change(candidate) then
                     keybind.selecting = false
-                    keybind.frame.Color = theme.light_contrast
+                    utility:SetThemeProperty(
+                        keybind.frame,
+                        "Color",
+                        "light_contrast"
+                    )
                     callback(candidate, keybind.active)
                 end
 
@@ -3319,7 +3828,11 @@ function sections:Toggle(info)
                 and pointInside(outline.Position, outline.Size, utility:MouseLocation())
             then
                 keybind.selecting = true
-                keybind.frame.Color = theme.dark_contrast
+                utility:SetThemeProperty(
+                    keybind.frame,
+                    "Color",
+                    "dark_contrast"
+                )
                 keybind.valueText.Text = "..."
             end
         end)
@@ -3390,6 +3903,8 @@ end
 
 library.NewWindow = library.New
 library.CreateWindow = library.New
+library.SetColor = library.SetThemeColor
+library.SetUIOpacity = library.SetOpacity
 
 -- The old source returned four values. Keep the exact return shape so current
 -- Empyrean integrations can switch source URLs without changing their loader.
