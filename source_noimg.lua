@@ -1785,6 +1785,48 @@ function sections:Slider(info)
     slider.slide = slide
     slider.valueText = valueText
 
+    local function getStepPrecision(step)
+        step = math.abs(tonumber(step) or 1)
+
+        if step == 0 then
+            return 6
+        end
+
+        -- Find how many decimal places are actually required by the slider
+        -- increment. This prevents binary floating-point noise in the UI while
+        -- still preserving values such as 0.025.
+        for precision = 0, 8 do
+            local scale = 10 ^ precision
+            local scaled = step * scale
+
+            if math.abs(scaled - math.round(scaled)) < 1e-7 then
+                return precision
+            end
+        end
+
+        return 8
+    end
+
+    local stepPrecision = getStepPrecision(slider.step)
+
+    local function cleanNumber(value)
+        local formatted = string.format(
+            "%." .. tostring(stepPrecision) .. "f",
+            tonumber(value) or 0
+        )
+
+        if string.find(formatted, ".", 1, true) then
+            formatted = formatted:gsub("0+$", "")
+            formatted = formatted:gsub("%.$", "")
+        end
+
+        if formatted == "-0" then
+            formatted = "0"
+        end
+
+        return formatted
+    end
+
     local function roundToStep(value)
         local step = tonumber(slider.step) or 1
 
@@ -1792,7 +1834,11 @@ function sections:Slider(info)
             return value
         end
 
-        return math.round(value / step) * step
+        local rounded = math.round(value / step) * step
+
+        -- Normalize the numeric value too, so callbacks/configs do not receive
+        -- avoidable floating-point noise.
+        return tonumber(cleanNumber(rounded)) or rounded
     end
 
     function slider:Set(value)
@@ -1808,7 +1854,13 @@ function sections:Slider(info)
             self.frame.Size.Y
         )
 
-        self.valueText.Text = tostring(self.current) .. self.sub .. "/" .. tostring(self.max) .. self.sub
+        self.valueText.Text =
+            cleanNumber(self.current)
+            .. self.sub
+            .. "/"
+            .. cleanNumber(self.max)
+            .. self.sub
+
         callback(self.current)
     end
 
