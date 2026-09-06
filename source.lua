@@ -1718,9 +1718,17 @@ do
                                 --utility:LoadImage(colorpicker_open_transparency_image, "transp", "https://i.imgur.com/VcMAYjL.png")
                             end
                             --
-                            utility:LoadImage(colorpicker_open_picker_image, "valsat", "https://i.imgur.com/wpDRqVH.png")
+                            utility:LoadImage(
+    							colorpicker_open_picker_image,
+    							"valsat_empyrean",
+    							"https://raw.githubusercontent.com/koiify/empyrean/main/valsat.png"
+							)
                             utility:LoadImage(colorpicker_open_picker_cursor, "valsat_cursor", "https://raw.githubusercontent.com/mvonwalk/splix-assets/main/Images-cursor.png")
-                            utility:LoadImage(colorpicker_open_huepicker_image, "hue", "https://i.imgur.com/iEOsHFv.png")
+                            utility:LoadImage(
+    							colorpicker_open_huepicker_image,
+    							"hue_empyrean",
+    							"https://raw.githubusercontent.com/koiify/empyrean/main/hue.png"
+							)
                             --
                             window.currentContent.frame = colorpicker_open_inline
                             window.currentContent.colorpicker = colorpicker
@@ -3347,9 +3355,17 @@ do
                             --utility:LoadImage(colorpicker_open_transparency_image, "transp", "https://i.imgur.com/VcMAYjL.png")
                         end
                         --
-                        utility:LoadImage(colorpicker_open_picker_image, "valsat", "https://i.imgur.com/wpDRqVH.png")
+                        utility:LoadImage(
+    						colorpicker_open_picker_image,
+    						"valsat_empyrean",
+    						"https://raw.githubusercontent.com/koiify/empyrean/main/valsat.png"
+						)
                         utility:LoadImage(colorpicker_open_picker_cursor, "valsat_cursor", "https://raw.githubusercontent.com/mvonwalk/splix-assets/main/Images-cursor.png")
-                        utility:LoadImage(colorpicker_open_huepicker_image, "hue", "https://i.imgur.com/iEOsHFv.png")
+                        utility:LoadImage(
+    						colorpicker_open_huepicker_image,
+    						"hue_empyrean",
+    						"https://raw.githubusercontent.com/koiify/empyrean/main/hue.png"
+						)
                         --
                         window.currentContent.frame = colorpicker_open_inline
                         window.currentContent.colorpicker = colorpicker
@@ -3724,9 +3740,17 @@ do
                                 --utility:LoadImage(colorpicker_open_transparency_image, "transp", "https://i.imgur.com/VcMAYjL.png")
                             end
                             --
-                            utility:LoadImage(colorpicker_open_picker_image, "valsat", "https://i.imgur.com/wpDRqVH.png")
+                            utility:LoadImage(
+    							colorpicker_open_picker_image,
+    							"valsat_empyrean",
+    							"https://raw.githubusercontent.com/koiify/empyrean/main/valsat.png"
+							)
                             utility:LoadImage(colorpicker_open_picker_cursor, "valsat_cursor", "https://raw.githubusercontent.com/mvonwalk/splix-assets/main/Images-cursor.png")
-                            utility:LoadImage(colorpicker_open_huepicker_image, "hue", "https://i.imgur.com/iEOsHFv.png")
+                            utility:LoadImage(
+    							colorpicker_open_huepicker_image,
+    							"hue_empyrean",
+    							"https://raw.githubusercontent.com/koiify/empyrean/main/hue.png"
+							)
                             --
                             window.currentContent.frame = colorpicker_open_inline
                             window.currentContent.colorpicker = colorpicker
