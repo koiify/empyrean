@@ -898,18 +898,6 @@ do
                 Hidden = true
             });window.cursor["cursor_inline"] = cursor_inline
             --
-            utility:Connection(rs.RenderStepped, function()
-                local mouseLocation = utility:MouseLocation()
-                --
-                cursor.PointA = Vector2.new(mouseLocation.X, mouseLocation.Y)
-                cursor.PointB = Vector2.new(mouseLocation.X + 16, mouseLocation.Y + 6)
-                cursor.PointC = Vector2.new(mouseLocation.X + 6, mouseLocation.Y + 16)
-                --
-                cursor_inline.PointA = Vector2.new(mouseLocation.X, mouseLocation.Y)
-                cursor_inline.PointB = Vector2.new(mouseLocation.X + 16, mouseLocation.Y + 6)
-                cursor_inline.PointC = Vector2.new(mouseLocation.X + 6, mouseLocation.Y + 16)
-            end)
-            --
             uis.MouseIconEnabled = true
             --
             return window.cursor
