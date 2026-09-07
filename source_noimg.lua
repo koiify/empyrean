@@ -1240,7 +1240,7 @@ function library:New(info)
     local window = {
         pages = {},
         isVisible = false,
-        uibind = Enum.KeyCode.Z,
+        uibind = Enum.KeyCode.Unknown,
         currentPage = nil,
         fading = false,
         dragging = false,
