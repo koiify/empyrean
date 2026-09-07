@@ -1240,7 +1240,6 @@ function library:New(info)
     local window = {
         pages = {},
         isVisible = false,
-        uibind = Enum.KeyCode.Unknown,
         currentPage = nil,
         fading = false,
         dragging = false,
@@ -1609,12 +1608,6 @@ function library:New(info)
         )
 
         window:Move(desired)
-    end)
-
-    table.insert(library.began, function(input)
-        if input.KeyCode == window.uibind then
-            window:Fade()
-        end
     end)
 
     utility:Connection(Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"), function()
